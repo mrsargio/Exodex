@@ -7,17 +7,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import partial
 import base64
 import threading
-import time
-import os
-import sys
-import subprocess
 import asyncio
-from io import StringIO
-
-# Pyrogram imports
-from pyrogram import Client, filters
-from pyrogram.types import Message
-from pyromod import listen
+import time
+import concurrent.futures
 
 session = requests.Session()
 
@@ -355,8 +347,9 @@ def extract_layer_three_links(
 import json, base64
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from io import StringIO
-
-def utk(course_id):
+# course_id = input("\033[1mHey I Am x  .PLZ INPUT ANY BATCH ID TO EXTRACT THAT COURSE\033[0m : ")
+# Step 1: Retrieve CSRF token
+async def utk(course_id):
     try:
         r1 = session.get(base_url)
         csrf_token = r1.cookies.get('csrf_name')
@@ -483,12 +476,10 @@ def utk(course_id):
         return None
 
     # 🔁 Start main scraping
-    course_name = "Unknown Course"
     for course in dr3.get("data", []):
         try:
             fi = course.get("id")
             tn = course.get("title")
-            course_name = tn  # Save course name for the file
             binfo = course.get("segment_information")
             print(f"📚 {fi} - {tn}\n{binfo}")
 
@@ -520,7 +511,7 @@ def utk(course_id):
 
                     if "data" in dr6 and "list" in dr6["data"]:
                         video_items = dr6["data"]["list"]
-                        with ThreadPoolExecutor(max_workers=10) as executor:
+                        with ThreadPoolExecutor(max_workers=200) as executor:
                             futures = [
                                 executor.submit(process_video_item, v, fi, sfn, key, iv)
                                 for v in video_items
@@ -530,11 +521,9 @@ def utk(course_id):
                                 if result:
                                     buffer.write(result + "\n")
 
-            # 💾 Final write to file with course name
-            with open("final.txt", "w", encoding='utf-8') as f:
-                f.write(f"📦 Course: {course_name}\n")
-                f.write(f"🔢 Batch ID: {course_id}\n")
-                f.write("="*60 + "\n")
+            # 💾 Final write to file
+            with open("final.txt", "a", encoding='utf-8') as f:
+                # f.write(f"\n\n📦 Course: {tn}\n{'='*60}\n")
                 f.write(buffer.getvalue())
 
         except Exception as e:
@@ -542,98 +531,52 @@ def utk(course_id):
 
     end = time.time()
     print(f"\n⏱️ Total Extraction Completed in {end - start:.2f} seconds.")
-    print("📁 Output saved to: final.txt")
+    print("📁 Output saved to: final_output.txt")
 
-# Bot configuration
-API_ID = 24250238
-API_HASH = "cb3f118ce5553dc140127647edcf3720"
-BOT_TOKEN = "7511520910:AAFpmjNQZFCyqDILQV7GzLpnbxPZ4CEhXxw"
-ALLOWED_USER = 6175650047
+from pyrogram import Client, filters
+from pyrogram.types import Message
+from pyromod import listen
+
+API_ID = 24250238  # 🔑 Replace with your API ID
+API_HASH = "cb3f118ce5553dc140127647edcf3720"  # 🔑 Replace with your API HASH
+BOT_TOKEN = "6234022831:AAGXxnk_pOGRm0dUAFPQHjgF9h2vEtdzGTs"  # 🤖 Replace with your bot token
+ALLOWED_USER = 6175650047  # your Telegram user ID
 
 bot = Client("utkarqwesh_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
-# Global variable to track if bot is restarting
-is_restarting = False
-
-@bot.on_message(filters.command("utkarsh"))
+@bot.on_message(filters.command("start") )
+async def start_handler(client: Client, message: Message):
+    await message.reply(
+        "👋 Welcome to the Utkarsh Extractor Bot!\n\n"
+        "Use /utkarsh to begin extracting a course by batch ID.\n"
+        "Made by x"
+    )
+import os
+# === /utkarsh command ===
+@bot.on_message(filters.command("utkarsh") )
 async def get_course_id(client: Client, message: Message):
     try:
         # Step 1: Ask for Batch ID
-        ask = await message.reply("👋 Hey I Am x\n\n📥 Please send the Batch ID to extract:")
+        ask = await message.reply("👋 Hey I Am x\n\n📥 Please send the *Batch ID* to extract:")
 
         # Step 2: Wait for response
-        response = await client.listen(message.chat.id, timeout=120)
+        response = await bot.listen(message.chat.id, timeout=120)
         course_id = response.text.strip()
 
         # Step 3: Acknowledge
         await message.reply("⚙️ Starting extraction... Please wait.")
 
-        # Step 4: Run your main logic in a separate thread
-        import asyncio
-        from concurrent.futures import ThreadPoolExecutor
-        
-        with ThreadPoolExecutor() as executor:
-            await asyncio.get_event_loop().run_in_executor(
-                executor, utk, course_id
-            )
+        # Step 4: Run your main logic
+        await utk(course_id)  # 🔁 Your own function that extracts course and saves 'final_output.txt'
 
         # Step 5: Send result
-        if os.path.exists("final.txt"):
-            await message.reply_document(
-                "final.txt", 
-                caption=f"✅ Extraction completed for Batch ID: {course_id}!"
-            )
-            os.remove("final.txt")
-        else:
-            await message.reply("❌ Extraction failed. No output file was created.")
-            
-    except asyncio.TimeoutError:
-        await message.reply("⏰ Timeout! Please send the Batch ID again.")
+        await message.reply_document("final.txt", caption=f"✅ Extraction completed!")
+        os.remove("final.txt")
+
     except Exception as e:
-        await message.reply(f"❌ Error: {str(e)}")
+        await message.reply(f"❌ Error: {e}")
 
-# Stop command - only for allowed user
-@bot.on_message(filters.command("stop") & filters.user(ALLOWED_USER))
-async def stop_bot(client: Client, message: Message):
-    """Stop the bot (only for allowed user)"""
-    await message.reply("🛑 Bot is shutting down...")
-    await bot.stop()
-    os._exit(0)
+# === Start the Bot ===
+bot.run()
 
-# Restart command - only for allowed user
-@bot.on_message(filters.command("restart") & filters.user(ALLOWED_USER))
-async def restart_bot(client: Client, message: Message):
-    """Restart the bot (only for allowed user)"""
-    global is_restarting
-    is_restarting = True
-    await message.reply("🔄 Bot is restarting...")
-    
-    # Stop the bot gracefully
-    await bot.stop()
-    
-    # Restart using subprocess
-    python = sys.executable
-    os.execl(python, python, *sys.argv)
 
-# Status command - only for allowed user
-@bot.on_message(filters.command("status") & filters.user(ALLOWED_USER))
-async def bot_status(client: Client, message: Message):
-    """Check bot status"""
-    status_msg = "🤖 Bot Status:\n"
-    status_msg += f"✅ Running: Yes\n"
-    status_msg += f"👤 Allowed User: {ALLOWED_USER}\n"
-    status_msg += f"🔄 Restarting: {is_restarting}\n"
-    
-    await message.reply(status_msg)
-
-# Start the Bot with improved error handling
-if __name__ == "__main__":
-    print("Bot is starting...")
-    try:
-        bot.run()
-    except Exception as e:
-        print(f"Bot crashed with error: {e}")
-        print("Attempting to restart in 5 seconds...")
-        time.sleep(5)
-        python = sys.executable
-        os.execl(python, python, *sys.argv)
