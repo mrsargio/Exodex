@@ -531,7 +531,7 @@ async def utk(course_id):
 
     end = time.time()
     print(f"\n⏱️ Total Extraction Completed in {end - start:.2f} seconds.")
-    print("📁 Output saved to: final_output.txt")
+    print("📁 Output saved to: final.txt")
 
 from pyrogram import Client, filters
 from pyrogram.types import Message
