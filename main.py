@@ -519,64 +519,96 @@ async def utk(course_id):
                             for future in as_completed(futures):
                                 result = future.result()
                                 if result:
-                                    buffer.write(result + "\n")
-
-            # 💾 Final write to file
-            with open("final.txt", "a", encoding='utf-8') as f:
-                # f.write(f"\n\n📦 Course: {tn}\n{'='*60}\n")
-                f.write(buffer.getvalue())
-
-        except Exception as e:
-            print(f"❌ Error in course {fi}: {e}")
-
-    end = time.time()
-    print(f"\n⏱️ Total Extraction Completed in {end - start:.2f} seconds.")
-    print("📁 Output saved to: final_output.txt")
-
+   
+                                   buffer.write(result + "\n")
+#start
+import os
+import sys
+import time
+import io
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyromod import listen
 
-API_ID = 24250238  # 🔑 Replace with your API ID
-API_HASH = "cb3f118ce5553dc140127647edcf3720"  # 🔑 Replace with your API HASH
-BOT_TOKEN = "6234022831:AAGXxnk_pOGRm0dUAFPQHjgF9h2vEtdzGTs"  # 🤖 Replace with your bot token
-ALLOWED_USER = 6175650047  # your Telegram user ID
+# ==============================
+# 🔑 Update with your credentials
+# ==============================
+API_ID = 123456
+API_HASH = "abcdef1234567890"
+BOT_TOKEN = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+ALLOWED_USER = 111111111   # 👉 Your Telegram user ID
+# ==============================
 
 bot = Client("utkarqwesh_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
-@bot.on_message(filters.command("start") )
+# === Dummy Extraction Function ===
+# 👉 इसे तुम अपनी actual extraction logic से replace कर सकते हो
+async def utk(course_id: str) -> str:
+    """
+    Extracts course data for given batch ID.
+    Creates final.txt and returns the batch title.
+    """
+    start = time.time()
+    batch_title = f"Batch_{course_id}"   # 👉 यहीं तुम अपने actual course title logic डाल सकते हो
+
+    buffer = io.StringIO()
+    # Dummy content
+    buffer.write(f"📦 Course: {batch_title}\n")
+    buffer.write("=" * 60 + "\n")
+    buffer.write("Sample extracted content goes here...\n")
+
+    # Save to final.txt
+    with open("final.txt", "w", encoding="utf-8") as f:
+        f.write(buffer.getvalue())
+
+    end = time.time()
+    print(f"⏱️ Extraction for {batch_title} completed in {end - start:.2f} sec.")
+    return batch_title
+
+
+# === /start command ===
+@bot.on_message(filters.command("start"))
 async def start_handler(client: Client, message: Message):
     await message.reply(
         "👋 Welcome to the Utkarsh Extractor Bot!\n\n"
         "Use /utkarsh to begin extracting a course by batch ID.\n"
         "Made by x"
     )
-import os
+
+
 # === /utkarsh command ===
-@bot.on_message(filters.command("utkarsh") )
+@bot.on_message(filters.command("utkarsh"))
 async def get_course_id(client: Client, message: Message):
     try:
         # Step 1: Ask for Batch ID
-        ask = await message.reply("👋 Hey I Am x\n\n📥 Please send the *Batch ID* to extract:")
+        ask = await message.reply("📥 Please send the *Batch ID* to extract:")
 
         # Step 2: Wait for response
         response = await bot.listen(message.chat.id, timeout=120)
         course_id = response.text.strip()
 
         # Step 3: Acknowledge
-        await message.reply("⚙️ Starting extraction... Please wait.")
+        await message.reply("⚙️ Starting extraction... Please wait...")
 
-        # Step 4: Run your main logic
-        await utk(course_id)  # 🔁 Your own function that extracts course and saves 'final_output.txt'
+        # Step 4: Run extraction
+        batch_title = await utk(course_id)
 
-        # Step 5: Send result
-        await message.reply_document("final.txt", caption=f"✅ Extraction completed!")
-        os.remove("final.txt")
+        # Step 5: Save output with batch title
+        filename = f"{batch_title}.txt".replace(" ", "_")
+        if os.path.exists("final.txt"):
+            os.rename("final.txt", filename)
+
+            # Step 6: Send file only to admin
+            if message.from_user.id == ALLOWED_USER:
+                await message.reply_document(filename, caption=f"✅ Extraction completed for {batch_title}")
+            else:
+                await message.reply("⚠️ Extraction done, but only admin can download the file.")
+        else:
+            await message.reply("❌ Error: final.txt was not created.")
 
     except Exception as e:
         await message.reply(f"❌ Error: {e}")
 
+
 # === Start the Bot ===
 bot.run()
-
-
