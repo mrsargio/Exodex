@@ -530,14 +530,11 @@ from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyromod import listen
 
-# ==============================
-# 🔑 Update with your credentials
-# ==============================
-API_ID = 123456
-API_HASH = "abcdef1234567890"
-BOT_TOKEN = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
-ALLOWED_USER = 111111111   # 👉 Your Telegram user ID
-# ==============================
+# Bot configuration
+API_ID = 24250238  # 🔑 Replace with your API ID
+API_HASH = "cb3f118ce5553dc140127647edcf3720"  # 🔑 Replace with your API HASH
+BOT_TOKEN = "6234022831:AAGXxnk_pOGRm0dUAFPQHjgF9h2vEtdzGTs"  # 🤖 Replace with your bot token
+ALLOWED_USER = 6175650047  # your Telegram user ID
 
 bot = Client("utkarqwesh_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
